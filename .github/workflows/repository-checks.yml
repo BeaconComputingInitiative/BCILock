@@ -1,0 +1,18 @@
+# BEACON COMPUTING INITIATIVE
+# Developer Seal: CJB-DEV-2026
+# Component: BCILock static validation (no host security modifications)
+name: BCILock repository checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  static-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify signed repository documentation
+        run: sha256sum -c docs/SHA256SUMS
+      - name: Read-only repository tests
+        run: python3 -m unittest discover -s tests -v
