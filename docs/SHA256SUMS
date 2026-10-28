@@ -2,7 +2,7 @@
 # Developer Seal: CJB-DEV-2026
 # BCILock SHA-256: organizational changes only
 # Paths are relative to the repository root. Generated 2026-10-28.
-46b292da89e14fa190b6f8e5672c1b0e4b62e3113e0a1e5c0c31903faea4a09b  README.md
+5c41c6ca9b3018aaa4d57a485bab740fcb6063ddd0fec25a19e331c5a13a61a4  README.md
 f1f57fd695ad4589f097e23939756dea2ce1082732258490b0941974bc0cdfbf  docs/ARCHITECTURE.md
 55a37a4019e23237018306349671cbbb628075b6450d7dc9b5c042da19da4500  docs/COMPONENTS.md
 3cc2f25f3ebdadf964937d8c6d01a23ce29742301201eac2763309b1771f0e00  docs/SECURITY.md

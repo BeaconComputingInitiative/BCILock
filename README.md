@@ -1,6 +1,12 @@
 # BCILock
 ### Enterprise Linux Endpoint Gatekeeper
 
+<p align="center">
+  <a href="android/app/src/main/assets/branding/bcilock_eye_lighthouse.png">
+    <img src="android/app/src/main/assets/branding/bcilock_eye_lighthouse.png" alt="BCILock official icon — Beacon Computing Initiative" width="190" />
+  </a>
+</p>
+
 **BEACON COMPUTING INITIATIVE (BCI)**  
 **Developer:** Chance Joaquin Boone  
 **Developer Seal:** CJB-DEV-2026  
@@ -156,6 +162,16 @@ A remote Linux engineer opens their laptop. The endpoint is placed in `LOCKED` w
 | Hardened multi-distro, production-grade fleet release | No production qualification evidence | **Not claimed** |
 
 **Important distinction:** a successful cryptographic test does not mean the network gate is using cryptographic approval. A connected device can currently satisfy a separate, legacy egress condition. Do not deploy as a production passwordless-access or zero-trust enforcement solution on the strength of these tests alone.
+
+## Official icon and branding
+
+The **BCILock official application icon** is included directly in this public repository and displayed at the top of this README. The original PNG is part of the active Android project's branding assets, not a generated placeholder.
+
+- [View or save the official icon](android/app/src/main/assets/branding/bcilock_eye_lighthouse.png)
+- [Android launcher artwork](android/app/src/main/res/drawable/bci_lock_icon_art.png)
+- **Developer Seal:** `CJB-DEV-2026`
+
+GitHub does not automatically use README images as its repository social-preview graphic. Administrators can set a separate social preview in **Repository Settings → General → Social preview** if needed.
 
 ## 8. Repository map
 
