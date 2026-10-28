@@ -1,23 +1,31 @@
 # BEACON COMPUTING INITIATIVE - BCILock Security Policy
 Developer Seal: CJB-DEV-2026
 
-## Repository exposure
-Keep this repository private pending a full secret and metadata review. Earlier tracked installer scripts contain a specific Bluetooth MAC address. A MAC is a device identifier, not a password, but it must be parameterized before public portfolio publication. Historical backups, test reports, and build manifests can also disclose device or host metadata.
+## Public repository disclosure
+
+**This repository is public.** Earlier tracked installers, test reports and snapshots contain device-specific identifiers and host configuration metadata, including Bluetooth hardware addresses and local audit details. Public visibility means previously committed material may remain accessible through Git history even after files are removed from the current tree.
+
+Until a complete public-history review and sanitization are finished, do **not** consider the repository free of identifying metadata. Treat any historically exposed credential or token as compromised: revoke/rotate it, validate runtime enrollment state, and only then plan history remediation with coordinated repository owners and existing clones. Do not force-push history casually; its security implications and clone synchronization must be reviewed.
 
 ## Never commit
-Android signing keystores, private keys, API tokens, enrollment tokens, trusted-phone key material, personal device configuration, local telemetry databases, raw hardware inventory logs, signed APK release material, or real user credentials.
 
-The `.gitignore` rules protect *new untracked* files only. They do not remove previously committed material or erase Git history. If a credential was committed, revoke/rotate it and follow a carefully reviewed history-rewrite process before public disclosure.
+Android signing keystores, private keys, API tokens, enrollment tokens, trusted-phone key material, personal device configuration, raw telemetry databases, hardware inventory dumps, signed APK release material, or real user credentials. Use parameterized or synthetic device identifiers for published examples.
 
-## Authorization and fail-closed
-- A Bluetooth link, device MAC, or paired/trusted flag is **not** a signed approval.
-- A signed authorization is valid if and only if the enrolled public key matches, the challenge is fresh, the signature verifies, and a local policy explicitly consumes that result.
-- The presently independent connection-based egress guard is not evidence of that signed-policy coupling.
-- A telemetry or API outage must not silently authorize egress.
-- Keep emergency local-console recovery independent from the phone.
+The `.gitignore` file only protects *new untracked* files. It does not erase previously tracked files, Git objects, pull request content or forks.
+
+## Authorization and fail-closed behavior
+
+- A Bluetooth connection, device address, or paired/trusted flag is **not** a signed approval.
+- Signed authorization is valid **if and only if** an enrolled key matches, a fresh non-replayable challenge verifies, relevant phone approval is satisfied, and an explicit local policy accepts the result for the requested operation and lifetime.
+- The currently separate connection-based egress guard does **not** establish this signed-policy coupling.
+- Telemetry and policy-management failures must never silently authorize egress.
+- Local-console emergency recovery must exist and be physically tested before security enforcement is activated on production hosts.
+- Do not assume all possible non-IP exfiltration or host root-bypass paths are blocked by the current prototype.
 
 ## Change control
-Run static checks in CI. Test signed BLE behavior, power-loss boot, Bluetooth loss, failed signatures, network failures, and recovery physically before enabling any access-control modification. CI must never enable `bci-egress.service`, run `nft` changes, unlock XSecureLock, or pair a phone.
+
+Run static checks in CI, then perform scoped device and local-console tests for any authorization or enforcement change. Test invalid/replayed/expired signatures, removed phone, Bluetooth failure, restart and boot, race conditions, firewall coexistence, loss of remote management, and emergency recovery. CI must never enable `bci-egress.service`, run live `nft` changes, unlock XSecureLock, or pair a phone.
 
 ## Responsible reporting
-Do not publish exploitable enrollment data or secrets in public issues. Contact the repository owner privately to report suspected authorization bypasses or credential exposure.
+
+Do not publish exploit-ready enrollment material or sensitive credentials in a public issue. Report suspected bypasses or exposure privately to the repository owner. Do not assume security reports are handled through an automated response process.
