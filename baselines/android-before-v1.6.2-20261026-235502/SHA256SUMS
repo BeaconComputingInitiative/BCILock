@@ -1,0 +1,4 @@
+48eaacadd1b3eb3d80f9df16195dfe33af3c2ad6f928f9e43079089964cca96f  ./AndroidManifest.xml
+cdf7b01677f8dcd38d0799b34156acacf1cb77560763ac29c3801cd30566a660  ./build.gradle.kts
+e75f43d0604375ca75b1d4e826b93235b3909de04825d1fa075928901960913d  ./source/BciBridgeActivity.kt
+a990ce7f12b4bfb2996c0adbae6057d2e5eb94721294e16f4f048e0ad4000ae3  ./source/MainActivity.kt

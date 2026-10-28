@@ -1,0 +1,14 @@
+# BEACON COMPUTING INITIATIVE
+# Developer Seal: CJB-DEV-2026
+# Component: BCILock Telemetry Poll Scheduler
+[Unit]
+Description=BCILock telemetry sample scheduler
+
+[Timer]
+OnBootSec=4s
+OnUnitInactiveSec=3s
+AccuracySec=1s
+Unit=bci-lock-telemetry-collect.service
+
+[Install]
+WantedBy=timers.target

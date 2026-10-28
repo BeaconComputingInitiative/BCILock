@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BEACON COMPUTING INITIATIVE | Developer Seal: CJB-DEV-2026 -->
+<!-- Component: BCILock brand color resources -->
+<!-- SHA-256: recorded in package SHA256SUMS -->
+<resources>
+    <color name="bci_lock_onyx">#070A0F</color>
+</resources>

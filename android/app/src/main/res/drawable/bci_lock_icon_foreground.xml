@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BEACON COMPUTING INITIATIVE | Developer Seal: CJB-DEV-2026 -->
+<!-- Component: BCILock launcher artwork safe area -->
+<!-- SHA-256: recorded in package SHA256SUMS -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:inset="18%">
+    <bitmap android:src="@drawable/bci_lock_icon_art" android:gravity="fill" />
+</inset>

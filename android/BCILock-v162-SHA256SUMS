@@ -1,0 +1,6 @@
+2f576db87f0821bee34fa64191de24bc79a861adadf079bbc7b2cbcecba4f1c7  app/src/main/java/org/beaconcomputing/bcilock/MainActivity.kt
+7f88570a8637d9d2ed9c55b1b96551328e2a98e588ff8155986cd1efd0229935  app/src/main/java/org/beaconcomputing/bcilock/BciBridgeActivity.kt
+98342cf01a2ccaa53bb7f12414a728d8205eb56c324a7e159919b639e1e43a61  app/src/main/java/org/beaconcomputing/bcilock/BciBleLinkState.kt
+d4a5edf2b5c79d00ea2ea304ae9257d6903b81a8e9a28307cb69109d435d1443  app/src/main/java/org/beaconcomputing/bcilock/BciBleService.kt
+f4fb205df044ee669d3f066e0601717d5d25921bc53b3f76cc44957a83297980  app/src/main/AndroidManifest.xml
+20492f6b2a2499a81a1dc0709fa1c1144e74a971da686dac785fc469639a2b49  app/build.gradle.kts

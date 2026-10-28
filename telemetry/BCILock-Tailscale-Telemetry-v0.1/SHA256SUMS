@@ -1,0 +1,9 @@
+717e032ffafa58be338be3d340000ec952c963e9a40f4c48ac6cf678ac2a1da8  ./README.md
+0c7ffe3d7edc89e0bb1bd6a53f18dbf90df170b4329c28f2fea8444c417e19a2  ./install.sh
+b5f878915974e7e21a5394c8e7eac66f80fa552eacdd3304f8bf2bbd20809b03  ./src/api.py
+a7ca055c49f5f4efe9418e9b150a9b5277cba4a2da5cafebb14a705a65b435c8  ./src/collector.py
+8328fc378fa7f332dc8aae914cd5c3158ecebecb21f4aa22247639def43ea89f  ./systemd/bci-lock-telemetry-api.service
+184238b7dcd3206dc290ca427870adb66e20f7b853e83794f9f3c58bcc12144d  ./systemd/bci-lock-telemetry-collect.service
+269dcf7339fa16876789b0c03c1e953062f566c302cd0c59f13bf744c1ec3dd0  ./systemd/bci-lock-telemetry-collect.timer
+1d2fcb9327fc291fac885f7f9ff47e0e84e02f0c642a70981437f44a39db878c  ./tests/test_api.py
+98045613fba4bb7468c89bd5b87a3db85b59d0a69a855ff8ec6cf249cd32bd61  ./tests/test_collector.py

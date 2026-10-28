@@ -1,0 +1,21 @@
+# BEACON COMPUTING INITIATIVE
+# Developer Seal: CJB-DEV-2026
+# Component: BCILock Read-only Telemetry Collector
+[Unit]
+Description=BCILock read-only firewall status snapshot
+After=bci-egress.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/libexec/bci-telemetry/collector.py
+User=root
+Group=root
+UMask=0022
+ProtectHome=true
+PrivateTmp=true
+ProtectSystem=strict
+RuntimeDirectory=bci-lock-telemetry
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+ReadWritePaths=/run/bci-lock-telemetry
+NoNewPrivileges=true

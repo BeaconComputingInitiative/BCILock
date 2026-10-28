@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+# BEACON COMPUTING INITIATIVE
+# Component: BCI Lock — Native Bluetooth v1.1
+# Developer Seal: CJB-DEV-2026
+# Unlock if and only if the enrolled, paired,
+# trusted device reconnects during this cycle.
+
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+BASE = Path.home() / ".config/bci-lock-bt"
+CONFIG = BASE / "device.json"
+PROOF = BASE / "reconnect-tested.json"
+MAC_RE = re.compile(r"^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$")
+
+
+def read(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def save(path, obj):
+    BASE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    BASE.chmod(0o700)
+    tmp = path.with_suffix(".tmp")
+    with tmp.open("w") as f:
+        os.chmod(tmp, 0o600)
+        json.dump(obj, f)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
+def state(mac):
+    try:
+        result = subprocess.run(
+            ["bluetoothctl", "info", mac],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    output = result.stdout
+
+    if not re.search(
+        r"^Device\s+" + re.escape(mac) + r"(?:\s|$)",
+        output, re.M | re.I
+    ):
+        return None
+
+    def yes(field):
+        return bool(re.search(
+            r"^\s*" + field + r":\s+yes\s*$",
+            output, re.M | re.I
+        ))
+
+    return {
+        "paired": yes("Paired"),
+        "trusted": yes("Trusted"),
+        "connected": yes("Connected")
+    }
+
+
+def reconnect(mac, timeout=None):
+    saw_disconnection = False
+    started = time.monotonic()
+    previous = ""
+
+    while timeout is None or time.monotonic()-started < timeout:
+        s = state(mac)
+
+        if not s or not s["paired"] or not s["trusted"]:
+            message = "Bluetooth unavailable or device not trusted"
+
+        elif not s["connected"]:
+            saw_disconnection = True
+            message = "Disconnected: awaiting phone reconnection"
+
+        elif saw_disconnection:
+            return True
+
+        else:
+            message = "Connected: toggle phone Bluetooth OFF then ON"
+
+        if timeout is not None and message != previous:
+            print("[BCI]", message, flush=True)
+            previous = message
+
+        time.sleep(1)
+
+    return False
+
+
+def main(args):
+    command = args[0] if args else "status"
+
+    if command == "enroll":
+        if len(args) != 2:
+            print("Usage: bci-lock-bt enroll AA:BB:CC:DD:EE:FF")
+            return 2
+
+        mac = args[1].upper()
+        if not MAC_RE.fullmatch(mac):
+            print("[BCI] Invalid Bluetooth address")
+            return 2
+
+        s = state(mac)
+        if not s or not s["paired"] or not s["trusted"]:
+            print("[BCI] Device must be paired and trusted")
+            return 1
+
+        save(CONFIG, {"mac": mac})
+        PROOF.unlink(missing_ok=True)
+        print("[BCI] Enrolled:", mac)
+        return 0
+
+    mac = read(CONFIG).get("mac", "")
+    if not MAC_RE.fullmatch(mac):
+        print("[BCI] No enrolled phone")
+        return 2
+
+    if command == "status":
+        print("BEACON COMPUTING INITIATIVE")
+        print("Developer Seal: CJB-DEV-2026")
+        print("Phone:", mac)
+        print("BlueZ:", state(mac))
+        print(
+            "Reconnection test:",
+            "PASSED" if read(PROOF).get("mac") == mac
+            else "NOT PASSED"
+        )
+        return 0
+
+    if command == "test":
+        print("[BCI] Toggle Bluetooth OFF then ON on your phone")
+        if reconnect(mac, 120):
+            save(PROOF, {"mac": mac, "time": time.time()})
+            print("[BCI] PASS: Phone reconnection detected")
+            return 0
+        print("[BCI] FAIL: No reconnection detected")
+        return 1
+
+    if command == "auth":
+        return 0 if reconnect(mac) else 1
+
+    if command == "lock":
+        if read(PROOF).get("mac") != mac:
+            print("[BCI] Complete reconnection test first")
+            return 1
+
+        if not os.environ.get("DISPLAY") or \
+           os.environ.get("XDG_SESSION_TYPE") == "wayland":
+            print("[BCI] An X11 desktop session is required")
+            return 1
+
+        existing = subprocess.run(
+            ["pgrep", "-u", str(os.getuid()),
+             "-x", "xsecurelock"],
+            stdout=subprocess.DEVNULL,
+            check=False
+        )
+        if existing.returncode == 0:
+            print("[BCI] Already locked")
+            return 1
+
+        env = os.environ.copy()
+        env["XSECURELOCK_AUTH"] = "auth_bci_bt"
+        env["XSECURELOCK_SAVER"] = "saver_blank"
+
+        proc = subprocess.Popen(["xsecurelock"], env=env)
+        time.sleep(2)
+
+        if proc.poll() is None:
+            os.kill(proc.pid, signal.SIGUSR2)
+
+        return proc.wait()
+
+    print("Usage: bci-lock-bt {enroll MAC|status|test|lock}")
+    return 2
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        sys.exit(130)

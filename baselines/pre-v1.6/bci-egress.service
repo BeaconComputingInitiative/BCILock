@@ -1,0 +1,17 @@
+# BEACON COMPUTING INITIATIVE
+# Developer Seal: CJB-DEV-2026
+[Unit]
+Description=BCI Bluetooth Egress Guard
+Requires=bluetooth.service
+After=bluetooth.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/local/libexec/bci/egress.py monitor
+ExecStopPost=/usr/bin/python3 /usr/local/libexec/bci/egress.py block
+Restart=always
+RestartSec=1
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

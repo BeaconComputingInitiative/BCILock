@@ -1,0 +1,30 @@
+
+# BEACON COMPUTING INITIATIVE
+# Developer Seal: CJB-DEV-2026
+# BCILock protected local artifacts
+
+.env
+.env.*
+!.env.example
+.venv/
+.venv-*/
+__pycache__/
+*.pyc
+*.log
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.apk
+*.aab
+*.der
+local.properties
+.gradle/
+**/build/
+**/.cxx/
+.idea/

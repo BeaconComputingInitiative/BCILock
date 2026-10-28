@@ -1,0 +1,7 @@
+a990ce7f12b4bfb2996c0adbae6057d2e5eb94721294e16f4f048e0ad4000ae3  app/src/main/java/org/beaconcomputing/bcilock/MainActivity.kt
+48eaacadd1b3eb3d80f9df16195dfe33af3c2ad6f928f9e43079089964cca96f  app/src/main/AndroidManifest.xml
+cdf7b01677f8dcd38d0799b34156acacf1cb77560763ac29c3801cd30566a660  app/build.gradle.kts
+cbda105e2d71d0f890a3a7d8b75203b3c438eb53e1da2de55fd7d7451da718ce  app/src/main/res/drawable/bci_lock_icon_art.png
+fc952a48dbc8fc6cadddf0d601855148bba395dede26d4426378729a636bbc6e  app/src/main/res/drawable/bci_lock_icon_foreground.xml
+df1526879cb90c6ee10b0b69b989ead6fe716616195a4f088030dd28b78314f9  app/src/main/res/mipmap-anydpi-v26/ic_bci_lock.xml
+54c94021899931420f0f453d46680aa7cabfbdadf72a17720e7a209cf33dd758  app/src/main/res/values/bci_lock_colors.xml
