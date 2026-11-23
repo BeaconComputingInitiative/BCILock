@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
-    <application android:label="BCILock" android:theme="@android:style/Theme.Material.NoActionBar" android:usesCleartextTraffic="false" android:allowBackup="false" android:icon="@mipmap/ic_bci_lock" android:roundIcon="@mipmap/ic_bci_lock">
+    <application android:label="BCILock Stage 2 Preview" android:theme="@android:style/Theme.Material.NoActionBar" android:usesCleartextTraffic="false" android:allowBackup="false" android:icon="@mipmap/ic_bci_lock" android:roundIcon="@mipmap/ic_bci_lock">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

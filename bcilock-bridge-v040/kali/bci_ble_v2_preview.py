@@ -22,7 +22,8 @@ DOMAIN = b"BCILOCK-AUTH-V2\x00"
 PROTOCOL = "BCILOCK-AUTH-V2"
 SCOPE = "egress.preview"
 TARGET = "Enterprise"
-KEY_FILE = Path.home() / ".config" / "bci-lock" / "trusted-phone.der"
+KEY_FILE = Path.home() / ".config" / "bci-lock" / "trusted-stage2-phone.der"
+# Never overwrite the production V1 enrollment: trusted-phone.der remains untouched.
 AUDIT_DIR = Path.home() / "BCI" / "Projects" / "BCILock" / "diagnostics"
 
 
@@ -83,21 +84,24 @@ def audit(status: str, request_sha256: str, detail: str):
     print(f"[BCI] Audit record SHA-256: {digest}", flush=True)
 
 
-async def procedure():
+async def procedure(*, enroll_test: bool = False):
     # Lazy imports keep the offline tests independent of BLE and cryptography installations.
     from bleak import BleakClient, BleakScanner
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.exceptions import InvalidSignature
 
-    if not KEY_FILE.is_file():
-        raise RuntimeError("No enrollment; verify V1 first. Never auto-enroll.")
-    trusted = KEY_FILE.read_bytes()
-    key_hash = hashlib.sha256(trusted).hexdigest()
-    print(f"[BCI] Enrolled public-key SHA-256: {key_hash}", flush=True)
-    public = serialization.load_der_public_key(trusted)
-    if not isinstance(public, ec.EllipticCurvePublicKey) or not isinstance(public.curve, ec.SECP256R1):
-        raise RuntimeError("Enrolled key is not P-256")
+    trusted = None
+    public = None
+    if not enroll_test:
+        if not KEY_FILE.is_file():
+            raise RuntimeError("No isolated Stage 2 enrollment; run --enroll-test first. V1 trust is unchanged.")
+        trusted = KEY_FILE.read_bytes()
+        key_hash = hashlib.sha256(trusted).hexdigest()
+        print(f"[BCI] Stage 2 trusted public-key SHA-256: {key_hash}", flush=True)
+        public = serialization.load_der_public_key(trusted)
+        if not isinstance(public, ec.EllipticCurvePublicKey) or not isinstance(public.curve, ec.SECP256R1):
+            raise RuntimeError("Stage 2 enrolled key is not P-256")
     print("[BCI] Scanning for BCILock GATT advertisement (25 seconds).", flush=True)
     device = await BleakScanner.find_device_by_filter(
         lambda dev, data: SERVICE.lower() in [s.lower() for s in data.service_uuids],
@@ -113,8 +117,37 @@ async def procedure():
         await client.connect()
         connected = True
         remote = bytes(await client.read_gatt_char(PUBLIC))
-        if not remote or remote != trusted:
-            raise RuntimeError("Public-key mismatch: refusing V2 request; do not auto-enroll")
+        if not remote:
+            raise RuntimeError("Phone public key unavailable")
+        if enroll_test:
+            remote_key = serialization.load_der_public_key(remote)
+            if not isinstance(remote_key, ec.EllipticCurvePublicKey) or not isinstance(remote_key.curve, ec.SECP256R1):
+                raise RuntimeError("Phone key must be P-256")
+            fingerprint = hashlib.sha256(remote).hexdigest()
+            print(f"[BCI] Stage 2 phone fingerprint: {fingerprint}")
+            print("[BCI] Compare EXACTLY with ENROLLED KEY in BCILock Stage 2 Preview app.")
+            consent = input("Type ENROLL-STAGE2 if and only if they match: ")
+            if consent != "ENROLL-STAGE2":
+                raise RuntimeError("Stage 2 enrollment cancelled")
+            KEY_FILE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if KEY_FILE.is_file() and KEY_FILE.read_bytes() != remote:
+                backup_dir = AUDIT_DIR.parent / "Backups" / "Identity"
+                backup_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+                backup = backup_dir / ("trusted-stage2-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".der")
+                backup.write_bytes(KEY_FILE.read_bytes())
+                backup.chmod(0o600)
+                backup.with_suffix(".der.sha256").write_text(
+                    f"{hashlib.sha256(backup.read_bytes()).hexdigest()}  {backup.name}\\n", encoding="ascii"
+                )
+            tmp = KEY_FILE.with_suffix(".der.tmp")
+            tmp.write_bytes(remote)
+            tmp.chmod(0o600)
+            os.replace(tmp, KEY_FILE)
+            audit("ENROLLED", fingerprint, "Isolated Stage 2 public key; V1 trust unchanged")
+            print("[BCI] PASS: isolated Stage 2 key enrolled, production V1 key unchanged.")
+            return
+        if remote != trusted:
+            raise RuntimeError("Stage 2 public-key mismatch: refusing V2 request; V1 trust unchanged")
         payload, canonical = build_request(trusted)
         req_hash = hashlib.sha256(canonical).hexdigest()
         print("[BCI] Verified enrolled identity; sending V2 egress.preview only.", flush=True)
@@ -155,7 +188,8 @@ async def procedure():
 def main():
     parser = argparse.ArgumentParser(description="BCILock Android V2 BLE signed preview (no enforcement)")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--test", action="store_true", help="Perform live Bluetooth preview")
+    group.add_argument("--test", action="store_true", help="Perform live Bluetooth preview with isolated Stage 2 trust")
+    group.add_argument("--enroll-test", action="store_true", help="Enroll a SEPARATE Stage 2 public key, never V1")
     group.add_argument("--self-test", action="store_true", help="Offline protocol framing test")
     args = parser.parse_args()
     print("BEACON COMPUTING INITIATIVE | Developer Seal: CJB-DEV-2026")
@@ -168,7 +202,7 @@ def main():
         print(f"[BCI] PASS: V2 frame self-test ({len(packets)} packets) SHA-256 {hashlib.sha256(raw).hexdigest()}")
         return
     try:
-        asyncio.run(procedure())
+        asyncio.run(procedure(enroll_test=args.enroll_test))
     except Exception as exc:
         print(f"[BCI][FAIL] {exc}", flush=True)
         raise SystemExit(1)

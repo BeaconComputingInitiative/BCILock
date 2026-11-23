@@ -64,6 +64,11 @@ class V2ProtocolTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 list(m.frames(wrong))
 
+    def test_parallel_enrollment_isolated_from_v1(self):
+        self.assertEqual(m.KEY_FILE.name, "trusted-stage2-phone.der")
+        self.assertNotEqual(m.KEY_FILE.name, "trusted-phone.der")
+        self.assertIn("--enroll-test", MODULE_PATH.read_text(encoding="utf-8"))
+
     def test_no_firewall_in_host_verifier(self):
         source = MODULE_PATH.read_text(encoding="utf-8")
         for forbidden in ("nft add ", "nft delete ", "iptables -A", "systemctl start bci-egress"):
