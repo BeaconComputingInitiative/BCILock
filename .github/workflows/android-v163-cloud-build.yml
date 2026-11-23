@@ -75,7 +75,9 @@ jobs:
           test -s "$APK"
           mkdir -p out
           cp "$APK" out/BCILock-v1.6.3-stage2-debug.apk
-          (cd out && sha256sum BCILock-v1.6.3-stage2-debug.apk > SHA256SUMS && sha256sum -c SHA256SUMS)
+          cp bcilock-bridge-v040/kali/bci_ble_v2_preview.py out/bci_ble_v2_preview.py
+          cp docs/BCILock-v163-STAGE2.md out/README-STAGE2.md
+          (cd out && sha256sum BCILock-v1.6.3-stage2-debug.apk bci_ble_v2_preview.py README-STAGE2.md > SHA256SUMS && sha256sum -c SHA256SUMS)
           printf '%s\n' 'BEACON COMPUTING INITIATIVE' 'Developer Seal: CJB-DEV-2026' 'Stage: BLE_V2_PREVIEW_COMPILE_ONLY' 'BLE V2: UNSIGNED END-TO-END TESTS PENDING' 'PRODUCTION: HOLD' 'Firewall modifications: NONE' > out/BUILD-STATUS.txt
 
       - name: Upload untrusted debug APK (testing only)
