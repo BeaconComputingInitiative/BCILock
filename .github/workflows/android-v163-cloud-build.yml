@@ -1,0 +1,74 @@
+# BEACON COMPUTING INITIATIVE
+# Developer Seal: CJB-DEV-2026
+# Component: BCILock v1.6.3 Cloud Android Build (STAGING)
+# SHA-256: see docs/BCILock-v163-SHA256SUMS
+# Executes build if and only if source and tooling checks pass.
+# NOTE: Builds the source; it does NOT implement or approve a BLE V2 operation.
+name: BCILock Android v1.6.3 staging build
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-v163-cloud-build.yml'
+      - 'docs/BCILock-v163-SHA256SUMS'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify source SHA-256
+        shell: bash
+        run: sha256sum -c docs/BCILock-v163-SHA256SUMS
+
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK Platform 35
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Compile staging debug APK
+        shell: bash
+        working-directory: android
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Generate and verify APK SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK='android/app/build/outputs/apk/debug/app-debug.apk'
+          test -s "$APK"
+          mkdir -p out
+          cp "$APK" out/BCILock-v1.6.3-stage1-debug.apk
+          (cd out && sha256sum BCILock-v1.6.3-stage1-debug.apk > SHA256SUMS && sha256sum -c SHA256SUMS)
+          printf '%s\n' 'BEACON COMPUTING INITIATIVE' 'Developer Seal: CJB-DEV-2026' 'Stage: SIGNING_COMPONENT_ONLY' 'BLE V2: NOT INTEGRATED' 'Firewall modifications: NONE' > out/BUILD-STATUS.txt
+
+      - name: Upload untrusted debug APK (testing only)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BCILock-v1.6.3-stage1-debug-unsigned-release
+          path: out/
+          if-no-files-found: error
+          retention-days: 14
