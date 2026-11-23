@@ -11,8 +11,8 @@ android {
         applicationId = "org.beaconcomputing.bcilock"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.6.2-staging"
+        versionCode = 21
+        versionName = "1.6.3-stage2"
     }
 
     compileOptions {

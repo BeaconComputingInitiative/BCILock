@@ -1,5 +1,5 @@
 // BEACON COMPUTING INITIATIVE
-// Component: BCILock Android Authenticator v1.6.2
+// Component: BCILock Android Authenticator v1.6.3 Stage 2
 // Developer Seal: CJB-DEV-2026
 // SHA-256: see release SHA256SUMS
 package org.beaconcomputing.bcilock
@@ -17,6 +17,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
+import java.util.Date
 import android.view.WindowInsets
 import android.widget.*
 import android.security.keystore.KeyGenParameterSpec
@@ -35,9 +37,12 @@ class BciBridgeActivity : Activity() {
         val PUBLIC: UUID = UUID.fromString("d527a810-7cfa-4ed9-85da-29b9fe088f61")
         val CHALLENGE: UUID = UUID.fromString("d527a811-7cfa-4ed9-85da-29b9fe088f61")
         val RESPONSE: UUID = UUID.fromString("d527a812-7cfa-4ed9-85da-29b9fe088f61")
+        val V2_REQUEST: UUID = UUID.fromString("d527a813-7cfa-4ed9-85da-29b9fe088f61")
+        val V2_RESPONSE: UUID = UUID.fromString("d527a814-7cfa-4ed9-85da-29b9fe088f61")
         const val KEY_ALIAS = "BCILock-v040-Enterprise"
         const val AUTH_REQUEST = 717
         const val PERMISSION_REQUEST = 718
+        const val AUTH_V2_REQUEST = 719
     }
     private val onyx = Color.rgb(7, 10, 15)
     private val cyan = Color.rgb(34, 224, 245)
@@ -51,8 +56,12 @@ class BciBridgeActivity : Activity() {
     private lateinit var approve: Button
     private lateinit var deny: Button
     private lateinit var start: Button
+    private lateinit var v2Approve: Button
+    private lateinit var v2Deny: Button
+    private lateinit var v2Detail: TextView
     private lateinit var stop: Button
     private var credentialRequest: BciBleLinkState.Challenge? = null
+    private var v2CredentialRequest: BciBleV2State.Pending? = null
     private val prefix = "BCILOCK-V1|UNLOCK|Enterprise|".toByteArray(Charsets.US_ASCII)
     private val refresh = object : Runnable {
         override fun run() { updateState(); handler.postDelayed(this, 600) }
@@ -127,6 +136,7 @@ class BciBridgeActivity : Activity() {
         stage = panel(content, "AUTHENTICATION STATE", "OFFLINE", crimson)
         link = panel(content, "ENDPOINT LINK", "WAITING", cyan)
         detail = panel(content, "ENROLLED KEY", "Initializing Android Keystore", cyan)
+        v2Detail = panel(content, "V2 AUTHORIZATION PREVIEW", "No request — firewall remains unchanged", cyan)
         val commandRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         start = action("START GATT", cyan) { startOrRequest() }
         stop = action("STOP GATT", crimson) {
@@ -143,9 +153,18 @@ class BciBridgeActivity : Activity() {
         }
         content.addView(approve, LinearLayout.LayoutParams(-1, dp(66)).apply { topMargin = dp(12) })
         content.addView(deny, LinearLayout.LayoutParams(-1, dp(58)).apply { topMargin = dp(7) })
+        v2Approve = action("APPROVE V2 PREVIEW", cyan) { approveV2Preview() }
+        v2Deny = action("DENY V2 PREVIEW", crimson) {
+            BciBleV2State.snapshot().pending?.let { BciBleV2State.deny(it.epoch) }
+            updateState()
+        }
+        content.addView(v2Approve, LinearLayout.LayoutParams(-1, dp(66)).apply { topMargin = dp(15) })
+        content.addView(v2Deny, LinearLayout.LayoutParams(-1, dp(58)).apply { topMargin = dp(7) })
+        content.addView(text("V2 scope: egress.preview ONLY. This approval records a signed decision but NEVER enables firewall rules or network access.",
+            13f, muted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
         content.addView(text("A GATT link is not proof of endpoint identity. Signing does not unlock Kali or grant egress until the computer explicitly verifies and enforces it.",
             13f, muted), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14) })
-        content.addView(text("Developer Seal: CJB-DEV-2026  |  v1.6.2", 11f, cyan,
+        content.addView(text("Developer Seal: CJB-DEV-2026  |  v1.6.3 Stage 2", 11f, cyan,
             "jetbrainsmono.ttf"), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         setContentView(scroll)
         try { detail.text = "Enterprise key SHA-256\n${fingerprint(publicKey())}" }
@@ -189,8 +208,51 @@ class BciBridgeActivity : Activity() {
         }
         startActivityForResult(intent, AUTH_REQUEST)
     }
+    private fun approveV2Preview() {
+        val pending = BciBleV2State.claim() ?: return
+        v2CredentialRequest = pending
+        val guard = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        if (!guard.isDeviceSecure) {
+            BciBleV2State.cancelClaim(pending.epoch)
+            v2CredentialRequest = null
+            v2Detail.text = "SECURE DEVICE LOCK REQUIRED"
+            return
+        }
+        val prompt = guard.createConfirmDeviceCredentialIntent(
+            "BCILock V2", "Approve egress.preview ONLY for Enterprise; no firewall changes"
+        )
+        if (prompt == null) {
+            BciBleV2State.cancelClaim(pending.epoch)
+            v2CredentialRequest = null
+            v2Detail.text = "CREDENTIAL PROMPT UNAVAILABLE"
+            return
+        }
+        startActivityForResult(prompt, AUTH_V2_REQUEST)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == AUTH_V2_REQUEST) {
+            val p = v2CredentialRequest ?: return
+            v2CredentialRequest = null
+            if (resultCode != RESULT_OK) {
+                BciBleV2State.cancelClaim(p.epoch)
+                updateState()
+                return
+            }
+            try {
+                val sig = BciAuthorizationV2.signApprovedPreview(p.json, userConfirmed = true)
+                val der = Base64.decode(sig, Base64.NO_WRAP)
+                if (!BciBleV2State.signed(p, der)) {
+                    v2Detail.text = "V2 PREVIEW CHANGED OR EXPIRED — REQUEST AGAIN"
+                }
+            } catch (e: Exception) {
+                BciBleV2State.cancelClaim(p.epoch)
+                v2Detail.text = "V2 SIGNING FAILED: ${e.javaClass.simpleName}"
+            }
+            updateState()
+            return
+        }
         if (requestCode != AUTH_REQUEST) return
         val request = credentialRequest ?: return
         credentialRequest = null
@@ -213,6 +275,14 @@ class BciBridgeActivity : Activity() {
     private fun updateState() {
         if (!::stage.isInitialized) return
         val s = BciBleLinkState.snapshot()
+        val p = BciBleV2State.snapshot()
+        v2Detail.text = when {
+            p.pending != null -> "Target: ${p.pending.target}\\nScope: ${p.pending.scope}\\nExpiry: ${Date(p.pending.expiresAt * 1000)}\\nCredential + explicit approval REQUIRED"
+            p.signedResponseReady -> "Signed preview ready for Linux verification; network unchanged"
+            else -> p.message + "\\nNo firewall change"
+        }
+        v2Approve.isEnabled = p.pending != null && !p.approving
+        v2Deny.isEnabled = p.pending != null && !p.approving
         stage.text = when {
             s.challengePending && s.approvalInProgress -> "VERIFYING PHONE CREDENTIAL"
             s.challengePending -> "APPROVAL REQUIRED"

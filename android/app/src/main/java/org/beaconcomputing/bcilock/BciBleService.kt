@@ -1,5 +1,5 @@
 // BEACON COMPUTING INITIATIVE
-// Component: BCILock BLE Foreground Service v1.6.2
+// Component: BCILock BLE Foreground Service v1.6.3 Stage 2
 // Developer Seal: CJB-DEV-2026
 // SHA-256: see release SHA256SUMS
 package org.beaconcomputing.bcilock
@@ -82,6 +82,7 @@ class BciBleService : Service() {
         if (!adapter.isEnabled) throw IllegalStateException("Bluetooth adapter disabled")
         advertiser = adapter.bluetoothLeAdvertiser ?: throw IllegalStateException("BLE advertising unavailable")
         BciBleLinkState.start()
+        BciBleV2State.start()
         val gatt = manager!!.openGattServer(this, callback)
             ?: throw IllegalStateException("GATT server unavailable")
         server = gatt
@@ -91,6 +92,11 @@ class BciBleService : Service() {
         service.addCharacteristic(BluetoothGattCharacteristic(BciBridgeActivity.CHALLENGE,
             BluetoothGattCharacteristic.PROPERTY_WRITE, BluetoothGattCharacteristic.PERMISSION_WRITE))
         service.addCharacteristic(BluetoothGattCharacteristic(BciBridgeActivity.RESPONSE,
+            BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ))
+        // V2 preview is isolated from V1. Requests are always acknowledged and capped at 20 bytes.
+        service.addCharacteristic(BluetoothGattCharacteristic(BciBridgeActivity.V2_REQUEST,
+            BluetoothGattCharacteristic.PROPERTY_WRITE, BluetoothGattCharacteristic.PERMISSION_WRITE))
+        service.addCharacteristic(BluetoothGattCharacteristic(BciBridgeActivity.V2_RESPONSE,
             BluetoothGattCharacteristic.PROPERTY_READ, BluetoothGattCharacteristic.PERMISSION_READ))
         if (!gatt.addService(service)) throw IllegalStateException("GATT service registration failed")
     }
@@ -133,6 +139,7 @@ class BciBleService : Service() {
                     server?.cancelConnection(device)
                 } else updateNotification("BLE connected — identity not yet verified")
             } else {
+                BciBleV2State.disconnected(device.address)
                 BciBleLinkState.disconnected(device.address)
                 updateNotification("Waiting for Bluetooth endpoint")
             }
@@ -144,6 +151,7 @@ class BciBleService : Service() {
                 when (characteristic.uuid) {
                     BciBridgeActivity.PUBLIC -> try { publicKey() } catch (_: Exception) { null }
                     BciBridgeActivity.RESPONSE -> BciBleLinkState.responseFor(device.address)
+                    BciBridgeActivity.V2_RESPONSE -> BciBleV2State.responseFor(device.address)
                     else -> null
                 }
             } else null
@@ -156,12 +164,20 @@ class BciBleService : Service() {
         override fun onCharacteristicWriteRequest(device: BluetoothDevice, requestId: Int,
             characteristic: BluetoothGattCharacteristic, preparedWrite: Boolean,
             responseNeeded: Boolean, offset: Int, value: ByteArray) {
-            val valid = characteristic.uuid == BciBridgeActivity.CHALLENGE &&
-                !preparedWrite && offset == 0 && value.size == 32 &&
-                BciBleLinkState.receive(device.address, value)
+            val valid = if (preparedWrite || !responseNeeded || offset != 0) false else when (characteristic.uuid) {
+                BciBridgeActivity.CHALLENGE ->
+                    value.size == 32 && BciBleLinkState.receive(device.address, value)
+                BciBridgeActivity.V2_REQUEST ->
+                    BciBleV2State.receive(device.address, value)
+                else -> false
+            }
             if (responseNeeded) server?.sendResponse(device, requestId,
                 if (valid) BluetoothGatt.GATT_SUCCESS else BluetoothGatt.GATT_FAILURE, 0, null)
-            if (valid) updateNotification("Signed challenge awaiting phone approval — tap to open")
+            if (valid) updateNotification(
+                if (characteristic.uuid == BciBridgeActivity.V2_REQUEST)
+                    "V2 preview received — review on phone"
+                else "Signed challenge awaiting phone approval — tap to open"
+            )
         }
     }
     @Suppress("MissingPermission")
@@ -169,6 +185,7 @@ class BciBleService : Service() {
         try { advertiser?.stopAdvertising(advertisingCallback) } catch (_: Exception) { }
         try { server?.close() } catch (_: Exception) { }
         server = null; advertiser = null
+        BciBleV2State.stop()
         BciBleLinkState.stop()
         super.onDestroy()
     }
