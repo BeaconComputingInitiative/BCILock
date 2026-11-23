@@ -11,8 +11,17 @@ android {
         applicationId = "org.beaconcomputing.bcilock"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.6.2-staging"
+        versionCode = 21
+        versionName = "1.6.3-stage2"
+    }
+
+    // Debug builds MUST install alongside the enrolled V1 authenticator.
+    // Distinct applicationId means distinct AndroidKeyStore identity and staging trust file.
+    buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".stage2test"
+            versionNameSuffix = "-parallel"
+        }
     }
 
     compileOptions {

@@ -1,0 +1,3 @@
+069866718e81c3a3848e7b34a2998b9c94b24ddf4108b7dd5809a042b7624da5  android/app/src/main/java/org/beaconcomputing/bcilock/BciAuthorizationV2.kt
+6ed794e6095249d43095f18628d4e406a8129a950aca512586aca63a196e848d  .github/workflows/android-v163-cloud-build.yml
+d3968299f434474940a25ad27e4b85d703d6a33b1c0b1f12a033dc5512799362  docs/BCILock-v163-CLOUD-BUILD.md
